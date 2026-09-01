@@ -4,7 +4,6 @@ export const registerSchema = z
   .object({
     username: z
       .string()
-      .min(3, 'Username must be at least 3 characters long')
       .trim()
       .min(3, 'Username must be at least 3 characters')
       .max(30, 'Username cannot exceed 30 characters'),
@@ -39,5 +38,5 @@ export const loginSchema = z.object({
     .max(100, 'Password cannot exceed 100 characters'),
 });
 
-type RegisterInput = z.infer<typeof registerSchema>;
-type LoginInput = z.infer<typeof loginSchema>;
+export type RegisterInput = z.infer<typeof registerSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;

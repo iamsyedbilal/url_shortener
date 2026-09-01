@@ -30,6 +30,12 @@ app.use((req: Request, _res: Response, next) => {
   next();
 });
 
+// Routes Imports
+import authRoutes from './routes/auth.route.js';
+
+// Routes
+app.use('/api/auth', authRoutes);
+
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     status: 'error',
