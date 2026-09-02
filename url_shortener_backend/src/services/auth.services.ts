@@ -9,7 +9,10 @@ import {
 import crypto from 'crypto';
 import Session from '../models/session.model.js';
 import { Request, Response } from 'express';
-import { clearRefreshTokenCookie } from '../utils/cookie.js';
+import {
+  clearRefreshTokenCookie,
+  setRefreshTokenCookie,
+} from '../utils/cookie.js';
 
 interface RegisterInput {
   username: string;
@@ -110,4 +113,69 @@ export const logoutUser = async (refreshToken: string, res: Response) => {
   } finally {
     clearRefreshTokenCookie(res);
   }
+};
+
+export const refreshAccessToken = async (
+  refreshToken: string,
+  res: Response
+) => {
+  const decoded = verifyRefreshToken(refreshToken) as {
+    userId: string;
+    sessionId: string;
+  };
+
+  const tokenHash = crypto
+    .createHash('sha256')
+    .update(refreshToken)
+    .digest('hex');
+
+  const session = await Session.findOne({
+    user: decoded.userId,
+    sessionId: decoded.sessionId,
+    refreshTokenHash: tokenHash,
+  });
+
+  if (!session) {
+    clearRefreshTokenCookie(res);
+    throw new ApiError(401, 'Invalid session');
+  }
+
+  if (session.revokedAt) {
+    clearRefreshTokenCookie(res);
+    throw new ApiError(401, 'Session revoked');
+  }
+
+  if (session.expiresAt < new Date()) {
+    await session.deleteOne();
+    clearRefreshTokenCookie(res);
+    throw new ApiError(401, 'Session expired');
+  }
+
+  const user = await User.findById(decoded.userId);
+
+  if (!user) {
+    throw new ApiError(404, 'User not found');
+  }
+
+  const accessToken = generateAccessToken(user._id.toString(), user.role);
+
+  const newRefreshToken = generateRefreshToken(
+    user._id.toString(),
+    session.sessionId
+  );
+
+  session.refreshTokenHash = crypto
+    .createHash('sha256')
+    .update(newRefreshToken)
+    .digest('hex');
+
+  session.lastUsedAt = new Date();
+
+  await session.save();
+
+  setRefreshTokenCookie(res, newRefreshToken);
+
+  return {
+    accessToken,
+  };
 };

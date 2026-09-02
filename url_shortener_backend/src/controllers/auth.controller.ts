@@ -5,10 +5,14 @@ import asyncHandler from '../utils/asyncHandler.js';
 import {
   loginUser,
   logoutUser,
+  refreshAccessToken,
   registerUser,
 } from '../services/auth.services.js';
 import ApiError from '../utils/apiError.js';
-import { setRefreshTokenCookie } from '../utils/cookie.js';
+import {
+  clearRefreshTokenCookie,
+  setRefreshTokenCookie,
+} from '../utils/cookie.js';
 
 /**
  * Register a new user
@@ -66,7 +70,35 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(401, 'Refresh token is missing');
   }
 
-  await logoutUser(refreshToken, res);
+  if (refreshToken) {
+    await logoutUser(refreshToken, res);
+  } else {
+    clearRefreshTokenCookie(res);
+  }
 
   res.status(200).json(new ApiResponse(200, 'Logged out successfully', false));
 });
+
+/**
+ * Refresh Token
+ * @param req - Express request object containing user registration data
+ * @param res - Express response object
+ * @returns JSON response with success message
+ */
+export const RefreshToken = asyncHandler(
+  async (req: Request, res: Response) => {
+    const refreshToken = req.cookies?.refreshToken;
+
+    if (!refreshToken) {
+      throw new ApiError(401, 'Refresh token is missing');
+    }
+
+    const { accessToken } = await refreshAccessToken(refreshToken, res);
+
+    res.status(200).json(
+      new ApiResponse(200, 'Token refreshed successfully', {
+        accessToken,
+      })
+    );
+  }
+);
