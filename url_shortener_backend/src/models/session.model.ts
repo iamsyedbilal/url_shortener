@@ -50,7 +50,6 @@ const sessionSchema = new mongoose.Schema<ISession>(
     expiresAt: {
       type: Date,
       required: [true, 'Expiration date is required'],
-      index: true,
     },
   },
   { timestamps: true }

@@ -6,10 +6,17 @@ export const generateAccessToken = (userId: string, role: string) => {
   });
 };
 
-export const generateRefreshToken = (userId: string) => {
-  return jwt.sign({ userId }, process.env.REFRESH_TOKEN_SECRET!, {
-    expiresIn: '7d',
-  });
+export const generateRefreshToken = (userId: string, sessionId: string) => {
+  return jwt.sign(
+    {
+      userId,
+      sessionId,
+    },
+    process.env.REFRESH_TOKEN_SECRET!,
+    {
+      expiresIn: '7d',
+    }
+  );
 };
 
 export const verifyAccessToken = (token: string) => {

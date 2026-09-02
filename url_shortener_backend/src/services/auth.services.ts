@@ -1,7 +1,15 @@
 import User from '../models/user.model.js';
 import { comparePasswords, hashPassword } from '../utils/password.js';
 import ApiError from '../utils/apiError.js';
-import { generateAccessToken, generateRefreshToken } from '../utils/jwt.js';
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+} from '../utils/jwt.js';
+import crypto from 'crypto';
+import Session from '../models/session.model.js';
+import { Request, Response } from 'express';
+import { clearRefreshTokenCookie } from '../utils/cookie.js';
 
 interface RegisterInput {
   username: string;
@@ -25,21 +33,22 @@ export const registerUser = async (userData: RegisterInput) => {
     throw new ApiError(400, 'Username or email already exists');
   }
 
+  if (password !== confirmPassword) {
+    throw new ApiError(400, 'Passwords do not match');
+  }
+
   const passwordHash = await hashPassword(password);
 
-  // Create a new user instance
-  const savedUser = await User.create({
+  const user = await User.create({
     username,
     email,
     passwordHash,
   });
 
-  const user = await User.findById(savedUser._id);
-
   return user;
 };
 
-export const loginUser = async (userData: LoginInput) => {
+export const loginUser = async (userData: LoginInput, req: Request) => {
   const { email, password } = userData;
 
   const user = await User.findOne({ email }).select('+passwordHash');
@@ -51,15 +60,54 @@ export const loginUser = async (userData: LoginInput) => {
   const isPasswordValid = await comparePasswords(password, user.passwordHash);
 
   if (!isPasswordValid) {
-    throw new ApiError(401, 'Password is incorrect');
+    throw new ApiError(401, 'Invalid email or password');
   }
 
-  const userWithoutPassword = await User.findById(user._id).select(
-    '-passwordHash'
-  );
+  const sessionId = crypto.randomUUID();
+
+  const refreshToken = generateRefreshToken(user._id.toString(), sessionId);
+
+  const refreshTokenHash = crypto
+    .createHash('sha256')
+    .update(refreshToken)
+    .digest('hex');
+
+  await Session.create({
+    user: user._id,
+    sessionId,
+    refreshTokenHash,
+    ip: req.ip,
+    userAgent: req.get('user-agent'),
+    lastUsedAt: new Date(),
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  });
 
   const accessToken = generateAccessToken(user._id.toString(), user.role);
-  const refreshToken = generateRefreshToken(user._id.toString());
+
+  const userObject = user.toObject();
+  const { passwordHash, ...userWithoutPassword } = userObject;
 
   return { user: userWithoutPassword, accessToken, refreshToken };
+};
+
+export const logoutUser = async (refreshToken: string, res: Response) => {
+  try {
+    const decoded = verifyRefreshToken(refreshToken) as any;
+
+    const session = await Session.findOneAndUpdate(
+      {
+        user: decoded.userId,
+        sessionId: decoded.sessionId,
+      },
+      {
+        revokedAt: new Date(),
+      }
+    );
+
+    if (!session) {
+      throw new ApiError(401, 'Invalid session');
+    }
+  } finally {
+    clearRefreshTokenCookie(res);
+  }
 };
