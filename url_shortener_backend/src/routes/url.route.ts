@@ -15,10 +15,6 @@ const router = express.Router();
 // PATCH  /urls/:id/disable ✅
 // DELETE /urls/:id  ✅
 // GET    /:shortCode ✅
-// GET    /admin/users
-// GET    /admin/urls
-// PATCH  /admin/urls/:id/disable
-// DELETE /admin/urls/:id
 
 router.route('/create-url').post(authMiddleware, createShortUrl);
 

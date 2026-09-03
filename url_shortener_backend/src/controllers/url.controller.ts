@@ -75,9 +75,7 @@ export const deleteUrl = asyncHandler(async (req: Request, res: Response) => {
 
   await deleteUserUrl(Array.isArray(id) ? id[0] : id, userId);
 
-  return res
-    .status(204)
-    .json(new ApiResponse(204, 'URL delete successfully', null));
+  return res.status(204).send();
 });
 
 /**
