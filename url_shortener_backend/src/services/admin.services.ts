@@ -37,6 +37,10 @@ export const getAllUsersService = async ({
     filter.role = role;
   }
 
+  if (search && search.trim().length > 100) {
+    throw new ApiError(400, 'Search query is too long');
+  }
+
   // Search Username and Email
   if (search?.trim()) {
     filter.$or = [
@@ -100,6 +104,10 @@ export const getAllUrlsService = async ({
 
   if (isActive === 'false') {
     filter.isActive = false;
+  }
+
+  if (search && search.trim().length > 100) {
+    throw new ApiError(400, 'Search query is too long');
   }
 
   if (search?.trim()) {

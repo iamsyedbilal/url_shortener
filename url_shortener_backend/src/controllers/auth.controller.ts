@@ -70,11 +70,12 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(401, 'Refresh token is missing');
   }
 
-  if (refreshToken) {
-    await logoutUser(refreshToken, res);
-  } else {
+  if (!refreshToken) {
     clearRefreshTokenCookie(res);
+    throw new ApiError(401, 'Refresh token is missing');
   }
+
+  await logoutUser(refreshToken, res);
 
   res.status(200).json(new ApiResponse(200, 'Logged out successfully', false));
 });

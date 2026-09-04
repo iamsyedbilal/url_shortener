@@ -7,6 +7,7 @@ import {
   redirectUrl,
 } from '../controllers/url.controller.js';
 import authMiddleware from '../middlewares/auth.middleware.js';
+import { createUrlRateLimiter } from '../middlewares/rateLimiter.middleware.js';
 
 const router = express.Router();
 
@@ -16,7 +17,9 @@ const router = express.Router();
 // DELETE /urls/:id  ✅
 // GET    /:shortCode ✅
 
-router.route('/create-url').post(authMiddleware, createShortUrl);
+router
+  .route('/create-url')
+  .post(authMiddleware, createUrlRateLimiter, createShortUrl);
 
 router.route('/me').get(authMiddleware, getUrls);
 

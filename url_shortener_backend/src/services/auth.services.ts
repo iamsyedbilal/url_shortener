@@ -110,6 +110,11 @@ export const logoutUser = async (refreshToken: string, res: Response) => {
     if (!session) {
       throw new ApiError(401, 'Invalid session');
     }
+  } catch (error) {
+    if (!(error instanceof ApiError)) {
+      throw new ApiError(401, 'Invalid or expired session');
+    }
+    throw error;
   } finally {
     clearRefreshTokenCookie(res);
   }

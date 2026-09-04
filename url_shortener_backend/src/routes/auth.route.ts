@@ -5,15 +5,16 @@ import {
   RefreshToken,
   register,
 } from '../controllers/auth.controller.js';
+import { authRateLimiter } from '../middlewares/rateLimiter.middleware.js';
 
 const router = express.Router();
 
-router.route('/register').post(register);
+router.route('/register').post(authRateLimiter, register);
 
-router.route('/login').post(login);
+router.route('/login').post(authRateLimiter, login);
 
-router.route('/logout').post(logout);
+router.route('/logout').post(authRateLimiter, logout);
 
-router.route('/refresh-token').post(RefreshToken);
+router.route('/refresh-token').post(authRateLimiter, RefreshToken);
 
 export default router;

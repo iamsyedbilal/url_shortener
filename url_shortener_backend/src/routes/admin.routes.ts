@@ -7,6 +7,7 @@ import {
   getAllUrls,
   getAllUsers,
 } from '../controllers/admin.controller.js';
+import { apiRateLimiter } from '../middlewares/rateLimiter.middleware.js';
 
 // GET    /admin/users ✅
 // GET    /admin/urls ✅
@@ -17,6 +18,7 @@ const router = express.Router();
 
 router.use(authMiddleware);
 router.use(authorize('admin') as express.RequestHandler);
+router.use(apiRateLimiter);
 
 router.get('/users', getAllUsers);
 router.get('/urls', getAllUrls);
