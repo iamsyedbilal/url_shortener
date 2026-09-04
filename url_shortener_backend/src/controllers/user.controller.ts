@@ -25,21 +25,3 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
 
   res.status(200).json(new ApiResponse(200, 'User fetched successfully', user));
 });
-
-/**
- * Get all users
- * @param req - Express request object
- * @param res - Express response object
- * @returns JSON response with all user data
- */
-export const getAllUsers = asyncHandler(async (req: Request, res: Response) => {
-  const users = await User.find();
-
-  if (!users) {
-    throw new ApiError(400, 'No users found');
-  }
-
-  res
-    .status(200)
-    .json(new ApiResponse(200, 'Users fetched successfully', users));
-});

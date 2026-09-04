@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
 import asyncHandler from '../utils/asyncHandler.js';
-import User from '../models/user.model.js';
-import ApiError from '../utils/apiError.js';
 import ApiResponse from '../utils/apiResponse.js';
-import Url from '../models/url.model.js';
+
 import {
   deleteUrlByAdmin,
   disableUrlByAdmin,

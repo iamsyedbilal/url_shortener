@@ -54,11 +54,9 @@ export const getAllUsersService = async ({
 
   const [users, total] = await Promise.all([
     User.find(filter)
-      .select('_id username email role createdAt updatedAt')
       .sort({ [sortField]: sortDirection })
       .skip(skip)
       .limit(limitNumber),
-
     User.countDocuments(filter),
   ]);
 

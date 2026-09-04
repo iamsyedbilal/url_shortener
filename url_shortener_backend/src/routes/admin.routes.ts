@@ -1,11 +1,11 @@
 import express from 'express';
 import authMiddleware from '../middlewares/auth.middleware.js';
 import authorize from '../middlewares/role.middleware.js';
-import { getAllUsers } from '../controllers/user.controller.js';
 import {
   deleteAdminUrl,
   disableAdminUrl,
   getAllUrls,
+  getAllUsers,
 } from '../controllers/admin.controller.js';
 
 // GET    /admin/users ✅
