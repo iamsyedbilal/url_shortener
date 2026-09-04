@@ -7,6 +7,8 @@ import Url from '../models/url.model.js';
 import {
   deleteUrlByAdmin,
   disableUrlByAdmin,
+  getAllUrlsService,
+  getAllUsersService,
 } from '../services/admin.services.js';
 
 /**
@@ -16,15 +18,23 @@ import {
  * @returns JSON response with the all users data
  */
 export const getAllUsers = asyncHandler(async (req: Request, res: Response) => {
-  const users = await User.find();
+  const { page, limit, search, role, sortBy, sortOrder } = req.query as Record<
+    string,
+    string
+  >;
 
-  if (users.length === 0) {
-    throw new ApiError(404, 'No user found');
-  }
+  const data = await getAllUsersService({
+    page,
+    limit,
+    search,
+    role,
+    sortBy,
+    sortOrder,
+  });
 
   return res
     .status(200)
-    .json(new ApiResponse(200, 'Users fetched successfully', users));
+    .json(new ApiResponse(200, 'Users fetched successfully', data));
 });
 
 /**
@@ -34,15 +44,21 @@ export const getAllUsers = asyncHandler(async (req: Request, res: Response) => {
  * @returns JSON response with the all urls data
  */
 export const getAllUrls = asyncHandler(async (req: Request, res: Response) => {
-  const urls = await Url.find();
+  const { page, limit, search, isActive, sortBy, sortOrder } =
+    req.query as Record<string, string>;
 
-  if (urls.length === 0) {
-    throw new ApiError(404, 'No user found');
-  }
+  const data = await getAllUrlsService({
+    page,
+    limit,
+    isActive,
+    sortBy,
+    sortOrder,
+    search,
+  });
 
   return res
     .status(200)
-    .json(new ApiResponse(200, 'Urls fetched successfully', urls));
+    .json(new ApiResponse(200, 'Urls fetched successfully', data));
 });
 
 export const disableAdminUrl = asyncHandler(
