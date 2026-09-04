@@ -2,7 +2,7 @@ import Url from '../models/url.model.js';
 import User from '../models/user.model.js';
 import ApiError from '../utils/apiError.js';
 import { getPagination } from '../utils/getPagination.js';
-import { getSorting } from '../utils/getSorting .js';
+import { getSorting } from '../utils/getSorting.js';
 
 interface BaseQueryOptions {
   page?: string;
