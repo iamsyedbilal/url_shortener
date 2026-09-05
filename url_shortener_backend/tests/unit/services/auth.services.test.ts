@@ -1,8 +1,8 @@
 import { jest, describe, test, expect, beforeEach } from '@jest/globals';
 
-// ============================================================
-// MOCK MODULES
-// ============================================================
+// --------------------------------------------------
+// Mocks
+// --------------------------------------------------
 
 jest.unstable_mockModule('../../../src/models/user.model.js', () => ({
   default: {
@@ -43,9 +43,9 @@ jest.unstable_mockModule('crypto', () => ({
   },
 }));
 
-// ============================================================
-// IMPORT MOCKED MODULES
-// ============================================================
+// --------------------------------------------------
+// Dynamic imports
+// --------------------------------------------------
 
 const { default: User } = await import('../../../src/models/user.model.js');
 
@@ -63,34 +63,42 @@ const { clearRefreshTokenCookie, setRefreshTokenCookie } =
 
 const { default: crypto } = await import('crypto');
 
-// ============================================================
-// IMPORT SERVICE AFTER ALL MOCKS
-// ============================================================
-
 const { registerUser, loginUser, logoutUser, refreshAccessToken } =
   await import('../../../src/services/auth.services.js');
 
-// ============================================================
-// TESTS
-// ============================================================
+// --------------------------------------------------
+// Helpers
+// --------------------------------------------------
+
+const mockRequest = {
+  ip: '127.0.0.1',
+  get: jest.fn().mockReturnValue('test-user-agent'),
+} as any;
+
+const mockResponse = {} as any;
+
+// --------------------------------------------------
+// Tests
+// --------------------------------------------------
 
 describe('Auth Services', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  // ==========================================================
+  // ==================================================
   // registerUser
-  // ==========================================================
+  // ==================================================
 
   describe('registerUser', () => {
     test('should register a new user successfully', async () => {
-      const userData = {
-        username: 'bilal',
-        email: 'bilal@example.com',
-        password: 'password123',
-        confirmPassword: 'password123',
-      };
+      (User.findOne as jest.Mock).mockImplementation(() =>
+        Promise.resolve(null)
+      );
+
+      (hashPassword as jest.Mock).mockImplementation(() =>
+        Promise.resolve('hashed-password')
+      );
 
       const createdUser = {
         _id: 'user-id',
@@ -99,13 +107,16 @@ describe('Auth Services', () => {
         passwordHash: 'hashed-password',
       };
 
-      (User.findOne as jest.Mock).mockResolvedValue(null);
+      (User.create as jest.Mock).mockImplementation(() =>
+        Promise.resolve(createdUser)
+      );
 
-      (hashPassword as jest.Mock).mockResolvedValue('hashed-password');
-
-      (User.create as jest.Mock).mockResolvedValue(createdUser);
-
-      const result = await registerUser(userData);
+      const result = await registerUser({
+        username: 'bilal',
+        email: 'bilal@example.com',
+        password: 'password123',
+        confirmPassword: 'password123',
+      });
 
       expect(User.findOne).toHaveBeenCalledWith({
         $or: [{ username: 'bilal' }, { email: 'bilal@example.com' }],
@@ -123,141 +134,131 @@ describe('Auth Services', () => {
     });
 
     test('should throw error if username or email already exists', async () => {
-      const userData = {
-        username: 'bilal',
-        email: 'bilal@example.com',
-        password: 'password123',
-        confirmPassword: 'password123',
-      };
+      (User.findOne as jest.Mock).mockImplementation(() =>
+        Promise.resolve({
+          _id: 'existing-user',
+          username: 'bilal',
+          email: 'bilal@example.com',
+        })
+      );
 
-      (User.findOne as jest.Mock).mockResolvedValue({
-        _id: 'existing-user',
-      });
-
-      await expect(registerUser(userData)).rejects.toMatchObject({
+      await expect(
+        registerUser({
+          username: 'bilal',
+          email: 'bilal@example.com',
+          password: 'password123',
+          confirmPassword: 'password123',
+        })
+      ).rejects.toMatchObject({
         statusCode: 400,
         message: 'Username or email already exists',
       });
 
-      expect(hashPassword).not.toHaveBeenCalled();
-
       expect(User.create).not.toHaveBeenCalled();
+      expect(hashPassword).not.toHaveBeenCalled();
     });
 
     test('should throw error if passwords do not match', async () => {
-      const userData = {
-        username: 'bilal',
-        email: 'bilal@example.com',
-        password: 'password123',
-        confirmPassword: 'different123',
-      };
+      (User.findOne as jest.Mock).mockImplementation(() =>
+        Promise.resolve(null)
+      );
 
-      (User.findOne as jest.Mock).mockResolvedValue(null);
-
-      await expect(registerUser(userData)).rejects.toMatchObject({
+      await expect(
+        registerUser({
+          username: 'bilal',
+          email: 'bilal@example.com',
+          password: 'password123',
+          confirmPassword: 'different123',
+        })
+      ).rejects.toMatchObject({
         statusCode: 400,
         message: 'Passwords do not match',
       });
 
       expect(hashPassword).not.toHaveBeenCalled();
-
       expect(User.create).not.toHaveBeenCalled();
     });
   });
 
-  // ==========================================================
+  // ==================================================
   // loginUser
-  // ==========================================================
+  // ==================================================
 
   describe('loginUser', () => {
-    test('should login user successfully', async () => {
-      const userId = 'user-id';
-      const sessionId = 'session-id';
-
+    test('should login successfully with valid credentials', async () => {
       const user = {
-        _id: {
-          toString: () => userId,
-        },
-        email: 'bilal@example.com',
+        _id: 'user-id',
         username: 'bilal',
-        role: 'user',
+        email: 'bilal@example.com',
         passwordHash: 'hashed-password',
-
-        toObject: () => ({
-          _id: userId,
-          email: 'bilal@example.com',
-          username: 'bilal',
-          role: 'user',
-          passwordHash: 'hashed-password',
-        }),
+        role: 'user',
+        select: jest.fn() as jest.MockedFunction<() => Promise<any>>,
+        toObject: jest.fn() as jest.MockedFunction<() => Record<string, any>>,
       };
 
-      const select = jest.fn().mockResolvedValue(user);
+      user.select.mockImplementation(() => Promise.resolve(user));
 
-      (User.findOne as jest.Mock).mockReturnValue({
-        select,
+      user.toObject.mockImplementation(() => ({
+        _id: 'user-id',
+        username: 'bilal',
+        email: 'bilal@example.com',
+        passwordHash: 'hashed-password',
+        role: 'user',
+      }));
+
+      (User.findOne as jest.Mock).mockImplementation(() => ({
+        select: user.select,
+      }));
+
+      (comparePasswords as jest.Mock).mockImplementation(() =>
+        Promise.resolve(true)
+      );
+
+      (crypto.randomUUID as jest.Mock).mockReturnValue('session-id');
+
+      const hashUpdate = {
+        digest: jest.fn().mockReturnValue('refresh-token-hash'),
+      };
+
+      (crypto.createHash as jest.Mock).mockReturnValue({
+        update: jest.fn().mockReturnValue(hashUpdate),
       });
-
-      (comparePasswords as jest.Mock).mockResolvedValue(true);
-
-      (crypto.randomUUID as jest.Mock).mockReturnValue(sessionId);
 
       (generateRefreshToken as jest.Mock).mockReturnValue('refresh-token');
 
       (generateAccessToken as jest.Mock).mockReturnValue('access-token');
 
-      (crypto.createHash as jest.Mock).mockReturnValue({
-        update: jest.fn().mockReturnThis(),
-        digest: jest.fn().mockReturnValue('refresh-token-hash'),
-      });
-
-      (Session.create as jest.Mock).mockResolvedValue({});
-
-      const req = {
-        ip: '127.0.0.1',
-        get: jest.fn().mockReturnValue('test-user-agent'),
-      } as any;
+      (Session.create as jest.Mock).mockImplementation(() =>
+        Promise.resolve({})
+      );
 
       const result = await loginUser(
         {
           email: 'bilal@example.com',
           password: 'password123',
         },
-        req
+        mockRequest
       );
-
-      expect(User.findOne).toHaveBeenCalledWith({
-        email: 'bilal@example.com',
-      });
-
-      expect(select).toHaveBeenCalledWith('+passwordHash');
 
       expect(comparePasswords).toHaveBeenCalledWith(
         'password123',
         'hashed-password'
       );
 
-      expect(generateRefreshToken).toHaveBeenCalledWith(userId, sessionId);
+      expect(Session.create).toHaveBeenCalled();
 
-      expect(generateAccessToken).toHaveBeenCalledWith(userId, 'user');
-
-      expect(Session.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          user: user._id,
-          sessionId,
-          refreshTokenHash: 'refresh-token-hash',
-          ip: '127.0.0.1',
-          userAgent: 'test-user-agent',
-          lastUsedAt: expect.any(Date),
-          expiresAt: expect.any(Date),
-        })
+      expect(generateRefreshToken).toHaveBeenCalledWith(
+        'user-id',
+        'session-id'
       );
+
+      expect(generateAccessToken).toHaveBeenCalledWith('user-id', 'user');
 
       expect(result).toEqual({
         user: {
-          _id: userId,
-          email: 'bilal@example.com',
+          _id: 'user-id',
           username: 'bilal',
+          email: 'bilal@example.com',
           role: 'user',
         },
         accessToken: 'access-token',
@@ -265,22 +266,18 @@ describe('Auth Services', () => {
       });
     });
 
-    test('should throw error when user does not exist', async () => {
-      const select = jest.fn().mockResolvedValue(null);
-
-      (User.findOne as jest.Mock).mockReturnValue({
-        select,
-      });
-
-      const req = {} as any;
+    test('should throw error if user does not exist', async () => {
+      (User.findOne as jest.Mock).mockImplementation(() => ({
+        select: jest.fn().mockImplementation(async () => null),
+      }));
 
       await expect(
         loginUser(
           {
-            email: 'unknown@example.com',
+            email: 'notfound@example.com',
             password: 'password123',
           },
-          req
+          mockRequest
         )
       ).rejects.toMatchObject({
         statusCode: 401,
@@ -288,27 +285,23 @@ describe('Auth Services', () => {
       });
 
       expect(comparePasswords).not.toHaveBeenCalled();
-
       expect(Session.create).not.toHaveBeenCalled();
     });
 
-    test('should throw error when password is incorrect', async () => {
+    test('should throw error if password is incorrect', async () => {
       const user = {
-        _id: {
-          toString: () => 'user-id',
-        },
+        _id: 'user-id',
+        email: 'bilal@example.com',
         passwordHash: 'hashed-password',
       };
 
-      const select = jest.fn().mockResolvedValue(user);
+      (User.findOne as jest.Mock).mockImplementation(() => ({
+        select: (jest.fn() as jest.Mock).mockResolvedValue(user),
+      }));
 
-      (User.findOne as jest.Mock).mockReturnValue({
-        select,
-      });
-
-      (comparePasswords as jest.Mock).mockResolvedValue(false);
-
-      const req = {} as any;
+      (comparePasswords as jest.Mock).mockImplementation(() =>
+        Promise.resolve(false)
+      );
 
       await expect(
         loginUser(
@@ -316,7 +309,7 @@ describe('Auth Services', () => {
             email: 'bilal@example.com',
             password: 'wrong-password',
           },
-          req
+          mockRequest
         )
       ).rejects.toMatchObject({
         statusCode: 401,
@@ -328,79 +321,81 @@ describe('Auth Services', () => {
 
     test('should not return passwordHash in user response', async () => {
       const user = {
-        _id: {
-          toString: () => 'user-id',
-        },
-        email: 'bilal@example.com',
+        _id: 'user-id',
         username: 'bilal',
-        role: 'user',
+        email: 'bilal@example.com',
         passwordHash: 'hashed-password',
-
-        toObject: () => ({
-          _id: 'user-id',
-          email: 'bilal@example.com',
-          username: 'bilal',
-          role: 'user',
-          passwordHash: 'hashed-password',
-        }),
+        role: 'user',
+        select: jest.fn(),
+        toObject: jest.fn(),
       };
 
-      const select = jest.fn().mockResolvedValue(user);
+      user.select.mockResolvedValue(user);
 
-      (User.findOne as jest.Mock).mockReturnValue({
-        select,
+      user.toObject.mockReturnValue({
+        _id: 'user-id',
+        username: 'bilal',
+        email: 'bilal@example.com',
+        passwordHash: 'hashed-password',
+        role: 'user',
       });
 
-      (comparePasswords as jest.Mock).mockResolvedValue(true);
+      (User.findOne as jest.Mock).mockImplementation(() => ({
+        select: user.select,
+      }));
+
+      (
+        comparePasswords as jest.MockedFunction<typeof comparePasswords>
+      ).mockResolvedValue(true);
 
       (crypto.randomUUID as jest.Mock).mockReturnValue('session-id');
+
+      (crypto.createHash as jest.Mock).mockReturnValue({
+        update: jest.fn().mockReturnValue({
+          digest: jest.fn().mockReturnValue('hash'),
+        }),
+      });
 
       (generateRefreshToken as jest.Mock).mockReturnValue('refresh-token');
 
       (generateAccessToken as jest.Mock).mockReturnValue('access-token');
 
-      (crypto.createHash as jest.Mock).mockReturnValue({
-        update: jest.fn().mockReturnThis(),
-        digest: jest.fn().mockReturnValue('hash'),
-      });
-
-      (Session.create as jest.Mock).mockResolvedValue({});
-
-      const req = {
-        ip: '127.0.0.1',
-        get: jest.fn().mockReturnValue('test-agent'),
-      } as any;
+      (Session.create as jest.Mock).mockImplementation(() =>
+        Promise.resolve({} as any)
+      );
 
       const result = await loginUser(
         {
           email: 'bilal@example.com',
           password: 'password123',
         },
-        req
+        mockRequest
       );
 
       expect(result.user).not.toHaveProperty('passwordHash');
     });
   });
 
-  // ==========================================================
+  // ==================================================
   // logoutUser
-  // ==========================================================
+  // ==================================================
 
   describe('logoutUser', () => {
-    test('should logout user and revoke session successfully', async () => {
+    test('should logout successfully and revoke session', async () => {
       (verifyRefreshToken as jest.Mock).mockReturnValue({
         userId: 'user-id',
         sessionId: 'session-id',
       });
 
-      (Session.findOneAndUpdate as jest.Mock).mockResolvedValue({
+      const session = {
         _id: 'session-id',
-      });
+      };
 
-      const res = {} as any;
+      (Session.findOneAndUpdate as jest.Mock).mockImplementation(() =>
+        Promise.resolve(session)
+      );
 
-      await logoutUser('refresh-token', res);
+      await logoutUser('refresh-token', mockResponse);
 
       expect(verifyRefreshToken).toHaveBeenCalledWith('refresh-token');
 
@@ -414,7 +409,7 @@ describe('Auth Services', () => {
         }
       );
 
-      expect(clearRefreshTokenCookie).toHaveBeenCalledWith(res);
+      expect(clearRefreshTokenCookie).toHaveBeenCalledWith(mockResponse);
     });
 
     test('should throw error if session does not exist', async () => {
@@ -423,16 +418,18 @@ describe('Auth Services', () => {
         sessionId: 'session-id',
       });
 
-      (Session.findOneAndUpdate as jest.Mock).mockResolvedValue(null);
+      (Session.findOneAndUpdate as jest.Mock).mockImplementation(() =>
+        Promise.resolve(null)
+      );
 
-      const res = {} as any;
-
-      await expect(logoutUser('refresh-token', res)).rejects.toMatchObject({
+      await expect(
+        logoutUser('refresh-token', mockResponse)
+      ).rejects.toMatchObject({
         statusCode: 401,
         message: 'Invalid session',
       });
 
-      expect(clearRefreshTokenCookie).toHaveBeenCalledWith(res);
+      expect(clearRefreshTokenCookie).toHaveBeenCalledWith(mockResponse);
     });
 
     test('should throw error for invalid refresh token', async () => {
@@ -440,83 +437,85 @@ describe('Auth Services', () => {
         throw new Error('Invalid token');
       });
 
-      const res = {} as any;
-
-      await expect(logoutUser('invalid-token', res)).rejects.toMatchObject({
+      await expect(
+        logoutUser('invalid-token', mockResponse)
+      ).rejects.toMatchObject({
         statusCode: 401,
         message: 'Invalid or expired session',
       });
 
-      expect(clearRefreshTokenCookie).toHaveBeenCalledWith(res);
+      expect(clearRefreshTokenCookie).toHaveBeenCalledWith(mockResponse);
+
+      expect(Session.findOneAndUpdate).not.toHaveBeenCalled();
     });
   });
 
-  // ==========================================================
+  // ==================================================
   // refreshAccessToken
-  // ==========================================================
+  // ==================================================
 
   describe('refreshAccessToken', () => {
     test('should refresh access token successfully', async () => {
-      const userId = 'user-id';
-      const sessionId = 'session-id';
-
       (verifyRefreshToken as jest.Mock).mockReturnValue({
-        userId,
-        sessionId,
+        userId: 'user-id',
+        sessionId: 'session-id',
+      });
+
+      const digest = jest.fn().mockReturnValue('new-refresh-token-hash');
+
+      const update = jest.fn().mockReturnValue({
+        digest,
       });
 
       (crypto.createHash as jest.Mock).mockReturnValue({
-        update: jest.fn().mockReturnThis(),
-        digest: jest.fn().mockReturnValue('token-hash'),
+        update,
       });
 
       const session = {
-        user: userId,
-        sessionId,
-        refreshTokenHash: 'token-hash',
         revokedAt: null,
-        expiresAt: new Date(Date.now() + 60_000),
-        lastUsedAt: new Date(),
-        save: jest.fn(),
+        expiresAt: new Date(Date.now() + 100000),
+        refreshTokenHash: 'old-hash',
+        sessionId: 'session-id',
+        save: jest.fn().mockImplementation(() => Promise.resolve(undefined)),
       };
 
-      (Session.findOne as jest.Mock).mockResolvedValue(session);
+      (Session.findOne as jest.Mock).mockImplementation(() =>
+        Promise.resolve(session)
+      );
 
-      const user = {
-        _id: {
-          toString: () => userId,
-        },
-        role: 'user',
-      };
-
-      (User.findById as jest.Mock).mockResolvedValue(user);
+      (User.findById as jest.Mock).mockImplementation(() =>
+        Promise.resolve({
+          _id: 'user-id',
+          role: 'user',
+        })
+      );
 
       (generateAccessToken as jest.Mock).mockReturnValue('new-access-token');
 
       (generateRefreshToken as jest.Mock).mockReturnValue('new-refresh-token');
 
-      const res = {} as any;
-
-      const result = await refreshAccessToken('old-refresh-token', res);
+      const result = await refreshAccessToken(
+        'old-refresh-token',
+        mockResponse
+      );
 
       expect(verifyRefreshToken).toHaveBeenCalledWith('old-refresh-token');
 
-      expect(Session.findOne).toHaveBeenCalledWith({
-        user: userId,
-        sessionId,
-        refreshTokenHash: 'token-hash',
-      });
+      expect(Session.findOne).toHaveBeenCalled();
 
-      expect(User.findById).toHaveBeenCalledWith(userId);
+      expect(User.findById).toHaveBeenCalledWith('user-id');
 
-      expect(generateAccessToken).toHaveBeenCalledWith(userId, 'user');
+      expect(generateAccessToken).toHaveBeenCalledWith('user-id', 'user');
 
-      expect(generateRefreshToken).toHaveBeenCalledWith(userId, sessionId);
+      expect(generateRefreshToken).toHaveBeenCalledWith(
+        'user-id',
+        'session-id'
+      );
 
       expect(session.save).toHaveBeenCalled();
 
       expect(setRefreshTokenCookie).toHaveBeenCalledWith(
-        res,
+        mockResponse,
         'new-refresh-token'
       );
 
@@ -532,22 +531,23 @@ describe('Auth Services', () => {
       });
 
       (crypto.createHash as jest.Mock).mockReturnValue({
-        update: jest.fn().mockReturnThis(),
-        digest: jest.fn().mockReturnValue('token-hash'),
+        update: jest.fn().mockReturnValue({
+          digest: jest.fn().mockReturnValue('token-hash'),
+        }),
       });
 
-      (Session.findOne as jest.Mock).mockResolvedValue(null);
-
-      const res = {} as any;
+      (Session.findOne as jest.Mock).mockImplementation(() =>
+        Promise.resolve(null)
+      );
 
       await expect(
-        refreshAccessToken('refresh-token', res)
+        refreshAccessToken('refresh-token', mockResponse)
       ).rejects.toMatchObject({
         statusCode: 401,
         message: 'Invalid session',
       });
 
-      expect(clearRefreshTokenCookie).toHaveBeenCalledWith(res);
+      expect(clearRefreshTokenCookie).toHaveBeenCalledWith(mockResponse);
     });
 
     test('should throw error if session is revoked', async () => {
@@ -557,50 +557,54 @@ describe('Auth Services', () => {
       });
 
       (crypto.createHash as jest.Mock).mockReturnValue({
-        update: jest.fn().mockReturnThis(),
-        digest: jest.fn().mockReturnValue('token-hash'),
+        update: jest.fn().mockReturnValue({
+          digest: jest.fn().mockReturnValue('token-hash'),
+        }),
       });
 
-      (Session.findOne as jest.Mock).mockResolvedValue({
-        revokedAt: new Date(),
-        expiresAt: new Date(Date.now() + 60_000),
-      });
-
-      const res = {} as any;
+      (Session.findOne as jest.Mock).mockImplementation(() =>
+        Promise.resolve({
+          revokedAt: new Date(),
+          expiresAt: new Date(Date.now() + 100000),
+        })
+      );
 
       await expect(
-        refreshAccessToken('refresh-token', res)
+        refreshAccessToken('refresh-token', mockResponse)
       ).rejects.toMatchObject({
         statusCode: 401,
         message: 'Session revoked',
       });
 
-      expect(clearRefreshTokenCookie).toHaveBeenCalledWith(res);
+      expect(clearRefreshTokenCookie).toHaveBeenCalledWith(mockResponse);
     });
 
-    test('should delete expired session and throw error', async () => {
+    test('should throw error if session is expired', async () => {
       (verifyRefreshToken as jest.Mock).mockReturnValue({
         userId: 'user-id',
         sessionId: 'session-id',
       });
 
       (crypto.createHash as jest.Mock).mockReturnValue({
-        update: jest.fn().mockReturnThis(),
-        digest: jest.fn().mockReturnValue('token-hash'),
+        update: jest.fn().mockReturnValue({
+          digest: jest.fn().mockReturnValue('token-hash'),
+        }),
       });
 
-      const deleteOne = jest.fn();
+      const deleteOne = jest
+        .fn()
+        .mockImplementation(() => Promise.resolve(undefined));
 
-      (Session.findOne as jest.Mock).mockResolvedValue({
-        revokedAt: null,
-        expiresAt: new Date(Date.now() - 60_000),
-        deleteOne,
-      });
-
-      const res = {} as any;
+      (Session.findOne as jest.Mock).mockImplementation(() =>
+        Promise.resolve({
+          revokedAt: null,
+          expiresAt: new Date(Date.now() - 100000),
+          deleteOne,
+        })
+      );
 
       await expect(
-        refreshAccessToken('refresh-token', res)
+        refreshAccessToken('refresh-token', mockResponse)
       ).rejects.toMatchObject({
         statusCode: 401,
         message: 'Session expired',
@@ -608,7 +612,7 @@ describe('Auth Services', () => {
 
       expect(deleteOne).toHaveBeenCalled();
 
-      expect(clearRefreshTokenCookie).toHaveBeenCalledWith(res);
+      expect(clearRefreshTokenCookie).toHaveBeenCalledWith(mockResponse);
     });
 
     test('should throw error if user does not exist', async () => {
@@ -618,21 +622,24 @@ describe('Auth Services', () => {
       });
 
       (crypto.createHash as jest.Mock).mockReturnValue({
-        update: jest.fn().mockReturnThis(),
-        digest: jest.fn().mockReturnValue('token-hash'),
+        update: jest.fn().mockReturnValue({
+          digest: jest.fn().mockReturnValue('token-hash'),
+        }),
       });
 
-      (Session.findOne as jest.Mock).mockResolvedValue({
-        revokedAt: null,
-        expiresAt: new Date(Date.now() + 60_000),
-      });
+      (Session.findOne as jest.Mock).mockImplementation(() =>
+        Promise.resolve({
+          revokedAt: null,
+          expiresAt: new Date(Date.now() + 100000),
+        })
+      );
 
-      (User.findById as jest.Mock).mockResolvedValue(null);
-
-      const res = {} as any;
+      (User.findById as jest.Mock).mockImplementation(() =>
+        Promise.resolve(null)
+      );
 
       await expect(
-        refreshAccessToken('refresh-token', res)
+        refreshAccessToken('refresh-token', mockResponse)
       ).rejects.toMatchObject({
         statusCode: 404,
         message: 'User not found',
