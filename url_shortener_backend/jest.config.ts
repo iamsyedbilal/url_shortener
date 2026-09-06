@@ -15,6 +15,7 @@ const config: Config = {
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
+  maxWorkers: 1,
   roots: ['<rootDir>/tests'],
   testMatch: ['**/*.test.ts'],
   clearMocks: true,
