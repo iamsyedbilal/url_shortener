@@ -4,7 +4,7 @@ import logger from './utils/logger.js';
 import errorHandler from './middlewares/errorHandler.js';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-// import compression from 'compression';
+import mongoSanitize from 'express-mongo-sanitize';
 
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
@@ -35,6 +35,8 @@ app.use(
 app.use(express.urlencoded({ extended: true, limit: '16kb' }));
 app.use(express.static('public'));
 app.use(cookieParser());
+// This automatically strips out keys starting with "$" or containing "."
+app.use(mongoSanitize());
 
 app.use((req: Request, res: Response, next) => {
   const start = Date.now();
