@@ -1,6 +1,6 @@
 # URL Shortener
 
-A full-stack URL shortener project focused on building a clean, secure, and scalable backend API for creating and managing short links.
+A full-stack URL shortener project focused on building a clean, secure, tested, and scalable backend API for creating and managing short links.
 
 The repository currently contains the backend application in [`url_shortener_backend`](./url_shortener_backend), built with **Node.js, Express 5, TypeScript, MongoDB, and Mongoose**.
 
@@ -25,6 +25,7 @@ The repository currently contains the backend application in [`url_shortener_bac
 - 🌐 Configurable CORS
 - ⚠️ Centralized API error handling
 - 🗄️ MongoDB TTL cleanup for expired sessions
+- 🧪 Automated API integration testing with Jest and Supertest
 
 ## 🏗️ Project Structure
 
@@ -42,6 +43,8 @@ url_shortener/
 │   │   ├── validators/
 │   │   ├── app.ts
 │   │   └── index.ts
+│   ├── tests/
+│   │   └── integration/
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── README.md
@@ -49,8 +52,6 @@ url_shortener/
 ```
 
 ## 🛠️ Tech Stack
-
-### Backend
 
 | Technology | Purpose |
 | --- | --- |
@@ -65,14 +66,14 @@ url_shortener/
 | **Winston** | Application logging |
 | **cookie-parser** | Cookie handling |
 | **CORS** | Cross-origin request handling |
+| **Jest** | Test runner and assertions |
+| **Supertest** | HTTP/API integration testing |
 | **tsx** | Development TypeScript runner |
 | **tsup** | Production bundling |
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-
-Make sure you have installed:
 
 - **Node.js 20+** recommended
 - **npm**
@@ -98,15 +99,11 @@ Create a `.env` file inside `url_shortener_backend`:
 ```env
 PORT=8000
 NODE_ENV=development
-
 MONGO_URI=mongodb://127.0.0.1:27017
 DB_NAME=url_shortener
-
 ACCESS_TOKEN_SECRET=your_access_token_secret
 REFRESH_TOKEN_SECRET=your_refresh_token_secret
-
 SALT_ROUNDS=10
-
 CORS_ORIGIN=http://localhost:5173
 ```
 
@@ -118,31 +115,18 @@ CORS_ORIGIN=http://localhost:5173
 npm run dev
 ```
 
-The backend runs on:
-
-```text
-http://localhost:8000
-```
+The backend runs on `http://localhost:8000`.
 
 ### 5. Build for production
 
 ```bash
 npm run build
-```
-
-Then start the compiled application:
-
-```bash
 npm start
 ```
 
 ## 📡 API Overview
 
-Base URL:
-
-```text
-http://localhost:8000
-```
+Base URL: `http://localhost:8000`
 
 ### Authentication
 
@@ -170,6 +154,15 @@ http://localhost:8000
 | `DELETE` | `/api/url/:id` | User | Delete a URL |
 | `GET` | `/api/url/:shortCode` | Public | Redirect to the original URL |
 
+### Admin
+
+| Method | Endpoint | Authentication | Description |
+| --- | --- | --- | --- |
+| `GET` | `/api/admin/users` | Admin | List users |
+| `GET` | `/api/admin/urls` | Admin | List URLs |
+| `PATCH` | `/api/admin/urls/:id/disable` | Admin | Disable a URL |
+| `DELETE` | `/api/admin/urls/:id` | Admin | Delete a URL |
+
 ## 🔐 Authentication
 
 The backend uses access and refresh tokens.
@@ -178,25 +171,15 @@ The backend uses access and refresh tokens.
 2. Login with email and password.
 3. The API returns a short-lived access token.
 4. The refresh token is stored in an HTTP-only `refreshToken` cookie.
-5. Send the access token with protected requests:
-
-```http
-Authorization: Bearer <access-token>
-```
-
-6. When the access token expires, call:
-
-```http
-POST /api/auth/refresh-token
-```
-
+5. Send the access token with protected requests using `Authorization: Bearer <access-token>`.
+6. When the access token expires, call `POST /api/auth/refresh-token`.
 7. Logout revokes the refresh-token session and clears the cookie.
 
 Access tokens currently expire after **15 minutes** and refresh-token cookies are configured for **7 days**.
 
-## 🔗 Create a Short URL
+## 🔗 URL Management
 
-Request:
+Create a short URL with:
 
 ```http
 POST /api/url/create-url
@@ -204,25 +187,13 @@ Authorization: Bearer <access-token>
 Content-Type: application/json
 ```
 
-Body:
-
 ```json
 {
   "originalUrl": "https://example.com/some/long/path"
 }
 ```
 
-The destination must be a valid HTTP or HTTPS URL.
-
-## 🚀 Redirect
-
-Once a short URL has been created, access it using:
-
-```http
-GET /api/url/:shortCode
-```
-
-The server resolves the short code, updates the click count, and redirects the requester to the original URL.
+The destination must be a valid HTTP or HTTPS URL. A public request to `GET /api/url/:shortCode` resolves the short code, updates the click count, and redirects to the original URL.
 
 ## 🗃️ Data Models
 
@@ -262,8 +233,6 @@ Expired sessions are automatically cleaned up through a MongoDB TTL index on `ex
 
 ## 🛡️ Security
 
-The backend currently includes:
-
 - Password hashing with bcryptjs
 - Short-lived JWT access tokens
 - HTTP-only refresh-token cookies
@@ -272,20 +241,60 @@ The backend currently includes:
 - Role-based authorization for admin routes
 - Zod validation for incoming data
 - HTTP/HTTPS destination validation
-- Configurable CORS origins
+- Configurable CORS
 - 16 KB JSON and URL-encoded request-body limits
 - Centralized error handling
 - Structured request logging
+- Authentication and API rate limiting
 
 ## 🧪 Testing
 
-Automated tests have not been configured yet. The current backend package contains a placeholder `npm test` script.
+The backend has automated API integration tests using **Jest + Supertest**.
 
-Before opening a pull request, at minimum verify the production build:
+Current test status:
+
+- **16 test suites passed**
+- **151 tests passed**
+- **0 failed tests**
+- **96.37% statement coverage**
+- **96.35% line coverage**
+- **98.21% function coverage**
+- **82% branch coverage**
+
+Run the full test suite with:
 
 ```bash
-npm run build
+npm test
 ```
+
+Watch tests during development:
+
+```bash
+npm run test:watch
+```
+
+Generate a coverage report:
+
+```bash
+npm run test:coverage
+```
+
+The integration tests exercise the API through HTTP requests, covering authentication, users, URL management, redirects, admin authorization, validation, error handling, refresh-token flows, and security-related behavior.
+
+## 📚 Documentation
+
+The backend README contains the detailed developer documentation for:
+
+- Setup and environment configuration
+- Available scripts
+- Authentication and refresh-token flow
+- API endpoint reference and request examples
+- Data models
+- Security architecture
+- CORS configuration
+- Testing and coverage
+
+Formal OpenAPI/Swagger documentation is not currently required. It can be added later if the API needs an interactive API reference or external consumers.
 
 ## 📜 Backend Scripts
 
@@ -296,36 +305,19 @@ Run these commands from `url_shortener_backend`:
 | `npm run dev` | Start the development server with file watching |
 | `npm run build` | Build the TypeScript backend with tsup |
 | `npm start` | Start the compiled backend |
-| `npm test` | Placeholder test command |
+| `npm test` | Run the Jest test suite |
+| `npm run test:watch` | Run Jest in watch mode |
+| `npm run test:coverage` | Run Jest with coverage |
 
 ## 🌐 CORS
 
-The backend defaults to allowing:
-
-```text
-http://localhost:5173
-```
-
-You can configure one or more origins with:
+Configure one or more frontend origins with:
 
 ```env
 CORS_ORIGIN=http://localhost:5173,http://localhost:3000
 ```
 
 Credentials are enabled so the refresh-token cookie can be used by a frontend application.
-
-## 🔄 Current Development Status
-
-The repository is currently centered around the backend API. The backend provides the core authentication, session, URL creation, URL management, redirect, and user-management functionality.
-
-Potential next steps include:
-
-- Add automated unit/integration tests
-- Add a frontend client
-- Add API documentation with OpenAPI/Swagger
-- Add URL analytics beyond click counts
-- Add rate limiting and abuse protection
-- Add deployment configuration and CI/CD
 
 ## 🤝 Contributing
 
@@ -337,9 +329,10 @@ git checkout -b feature/your-feature
 ```
 
 3. Make your changes.
-4. Run the build:
+4. Run the tests and production build:
 
 ```bash
+npm test
 npm run build
 ```
 
