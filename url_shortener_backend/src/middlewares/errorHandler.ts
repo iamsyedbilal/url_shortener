@@ -12,6 +12,7 @@ const errorHandler = (
 
   if (err instanceof ZodError) {
     return res.status(400).json({
+      success: false,
       status: 'error',
       statusCode: 400,
       message: 'Validation failed',
@@ -24,6 +25,7 @@ const errorHandler = (
 
   if (err instanceof ApiError) {
     return res.status(err.statusCode).json({
+      success: false,
       status: 'error',
       statusCode: err.statusCode,
       message: err.message,
@@ -31,6 +33,7 @@ const errorHandler = (
   }
 
   return res.status(500).json({
+    success: false,
     status: 'error',
     statusCode: 500,
     message: 'Internal Server Error',
