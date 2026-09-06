@@ -209,10 +209,6 @@ describe('Auth Integration Tests', () => {
         password: 'password123',
       });
 
-      console.log('LOGIN STATUS:', loginResponse.status);
-      console.log('LOGIN BODY:', loginResponse.body);
-      console.log('LOGIN COOKIES:', loginResponse.headers['set-cookie']);
-
       const cookies = loginResponse.headers['set-cookie'];
 
       expect(cookies).toBeDefined();

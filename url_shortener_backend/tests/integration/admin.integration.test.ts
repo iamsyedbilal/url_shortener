@@ -104,7 +104,6 @@ describe('Admin API Integration Tests', () => {
         .get('/api/admin/users')
         .set('Authorization', `Bearer ${userToken}`);
 
-      console.log('NORMAL USER:', response.status, response.body);
       expect(response.status).toBe(403);
       expect(response.body.success).toBe(false);
     });
@@ -112,7 +111,6 @@ describe('Admin API Integration Tests', () => {
     it('should reject unauthenticated request with 401', async () => {
       const response = await request(app).get('/api/admin/users');
 
-      console.log('UNAUTH:', response.status, response.body);
       expect(response.status).toBe(401);
       expect(response.body.success).toBe(false);
     });
@@ -258,7 +256,6 @@ describe('Admin API Integration Tests', () => {
         .patch(`/api/admin/urls/${fakeId}/disable`)
         .set('Authorization', `Bearer ${adminToken}`);
 
-      console.log('FAKE URL:', response.status, response.body);
       expect(response.status).toBe(404);
       expect(response.body.success).toBe(false);
     });

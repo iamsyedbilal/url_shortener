@@ -9,7 +9,7 @@ async function startServer() {
   try {
     await connectDB().then(() => {
       app.listen(PORT, () => {
-        console.log(`Server is running on port http://localhost:${PORT}`);
+        console.info(`Server is running on port http://localhost:${PORT}`);
       });
     });
   } catch (error) {
