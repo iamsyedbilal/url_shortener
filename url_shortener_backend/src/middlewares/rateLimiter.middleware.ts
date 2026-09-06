@@ -23,7 +23,7 @@ const createRateLimiter = ({
 };
 
 export const authRateLimiter = createRateLimiter({
-  limit: 10,
+  limit: process.env.NODE_ENV === 'test' ? 1000 : 10,
   message: 'Too many authentication attempts. Please try again later.',
 });
 
