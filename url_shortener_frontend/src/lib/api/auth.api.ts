@@ -4,6 +4,7 @@ import type {
   RegisterPayload,
   RegisterResponse,
   RefreshTokenResponse,
+  User,
 } from "@/types/auth";
 import { api } from "./client";
 import { tokenStore } from "./token-store";

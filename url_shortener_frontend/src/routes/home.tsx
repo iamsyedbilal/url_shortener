@@ -14,26 +14,21 @@ import {
 import type { CreateUrlPayload, ShortUrl } from "@/types/url";
 
 const createUrlSchema = z.object({
-  originalUrl: z.preprocess(
-    (value) => {
-      if (typeof value !== "string") return value;
+  originalUrl: z
+    .string()
+    .trim()
+    .min(1, "Enter a URL.")
+    .refine((value) => {
+      const normalized = /^https?:\/\//i.test(value)
+        ? value
+        : `https://${value}`;
 
-      const trimmed = value.trim();
-
-      if (!trimmed) return trimmed;
-
-      return /^https?:\/\//i.test(trimmed)
-        ? trimmed
-        : `https://${trimmed}`;
-    },
-    z
-      .string()
-      .url("Enter a valid URL.")
-      .refine(
-        (value) => value.startsWith("http://") || value.startsWith("https://"),
-        "URL must start with http:// or https://.",
-      ),
-  ),
+      try {
+        return new URL(normalized).hostname.length > 0;
+      } catch {
+        return false;
+      }
+    }, "Enter a valid URL."),
 });
 
 export default function Home() {
@@ -54,12 +49,19 @@ export default function Home() {
   });
 
   const onSubmit = (payload: CreateUrlPayload) => {
-    createMutation.mutate(payload, {
-      onSuccess: (url) => {
-        setCreatedUrl(url);
-        reset({ originalUrl: "" });
+    const originalUrl = /^https?:\/\//i.test(payload.originalUrl)
+      ? payload.originalUrl
+      : `https://${payload.originalUrl}`;
+
+    createMutation.mutate(
+      { originalUrl },
+      {
+        onSuccess: (url) => {
+          setCreatedUrl(url);
+          reset({ originalUrl: "" });
+        },
       },
-    });
+    );
   };
 
   const copyUrl = async (shortUrl: string) => {
