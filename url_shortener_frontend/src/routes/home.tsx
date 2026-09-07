@@ -14,14 +14,26 @@ import {
 import type { CreateUrlPayload, ShortUrl } from "@/types/url";
 
 const createUrlSchema = z.object({
-  originalUrl: z
-    .string()
-    .trim()
-    .url("Enter a valid URL.")
-    .refine(
-      (value) => value.startsWith("http://") || value.startsWith("https://"),
-      "URL must start with http:// or https://.",
-    ),
+  originalUrl: z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return value;
+
+      const trimmed = value.trim();
+
+      if (!trimmed) return trimmed;
+
+      return /^https?:\/\//i.test(trimmed)
+        ? trimmed
+        : `https://${trimmed}`;
+    },
+    z
+      .string()
+      .url("Enter a valid URL.")
+      .refine(
+        (value) => value.startsWith("http://") || value.startsWith("https://"),
+        "URL must start with http:// or https://.",
+      ),
+  ),
 });
 
 export default function Home() {
@@ -45,7 +57,7 @@ export default function Home() {
     createMutation.mutate(payload, {
       onSuccess: (url) => {
         setCreatedUrl(url);
-        reset();
+        reset({ originalUrl: "" });
       },
     });
   };
@@ -83,7 +95,7 @@ export default function Home() {
             <div>
               <h2 className="font-semibold">Create a short link</h2>
               <p className="text-sm text-muted-foreground">
-                Paste any HTTP or HTTPS URL below.
+                Paste any URL below. https:// will be added when needed.
               </p>
             </div>
           </div>
