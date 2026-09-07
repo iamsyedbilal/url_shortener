@@ -11,10 +11,13 @@ export const createUrl = async (originalUrl: string, userId: string) => {
 
   if (existingUrl) {
     return {
-      id: existingUrl._id,
+      id: existingUrl._id.toString(),
       originalUrl: existingUrl.originalUrl,
       shortCode: existingUrl.shortCode,
       shortUrl: `${BaseURL}/${existingUrl.shortCode}`,
+      clickCount: existingUrl.clickCount,
+      isActive: existingUrl.isActive,
+      createdAt: existingUrl.createdAt,
     };
   }
 
@@ -31,10 +34,13 @@ export const createUrl = async (originalUrl: string, userId: string) => {
   });
 
   return {
-    id: url._id,
+    id: url._id.toString(),
     originalUrl: url.originalUrl,
     shortCode: url.shortCode,
     shortUrl: `${BaseURL}/${url.shortCode}`,
+    clickCount: url.clickCount,
+    isActive: url.isActive,
+    createdAt: url.createdAt,
   };
 };
 
@@ -42,9 +48,13 @@ export const getUrl = async (userId: string) => {
   const urls = await Url.find({ userId }).sort({ createdAt: -1 });
 
   return urls.map((url) => ({
+    id: url._id.toString(),
     originalUrl: url.originalUrl,
     shortCode: url.shortCode,
     shortUrl: `${BaseURL}/${url.shortCode}`,
+    clickCount: url.clickCount,
+    isActive: url.isActive,
+    createdAt: url.createdAt,
   }));
 };
 
