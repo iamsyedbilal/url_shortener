@@ -5,6 +5,7 @@ import errorHandler from './middlewares/errorHandler.js';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import mongoSanitize from '@exortek/express-mongo-sanitize';
+import { redirectUrl } from './controllers/url.controller.js';
 
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
@@ -61,6 +62,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/url', urlRoutes);
 app.use('/api/admin', adminRoutes);
+
+// Public short URLs live at the backend root, e.g. http://localhost:8000/abc123.
+// Keep this after the API routes so /api/* is always handled by the API routers.
+app.get('/:shortCode', redirectUrl);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({
