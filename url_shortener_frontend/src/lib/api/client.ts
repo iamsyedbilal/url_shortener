@@ -1,3 +1,5 @@
+import { tokenStore } from "./token-store";
+
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 export interface ApiResponse<T> {
@@ -57,9 +59,40 @@ async function parseResponse<T>(response: Response): Promise<T> {
   return payload.data;
 }
 
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/auth/refresh-token`, {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!res.ok) {
+          tokenStore.set(null);
+          return null;
+        }
+        const payload = (await res.json()) as ApiResponse<{
+          accessToken: string;
+        }>;
+        tokenStore.set(payload.data.accessToken);
+        return payload.data.accessToken;
+      } catch {
+        tokenStore.set(null);
+        return null;
+      } finally {
+        refreshPromise = null;
+      }
+    })();
+  }
+  return refreshPromise;
+}
+
 export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
+  isRetry = false,
 ): Promise<T> {
   const { body, accessToken, headers, ...requestOptions } = options;
 
@@ -69,8 +102,9 @@ export async function apiRequest<T>(
     requestHeaders.set("Content-Type", "application/json");
   }
 
-  if (accessToken) {
-    requestHeaders.set("Authorization", `Bearer ${accessToken}`);
+  const token = accessToken ?? tokenStore.get();
+  if (token) {
+    requestHeaders.set("Authorization", `Bearer ${token}`);
   }
 
   const response = await fetch(`${API_URL}${path}`, {
@@ -84,6 +118,18 @@ export async function apiRequest<T>(
           ? body
           : JSON.stringify(body),
   });
+
+  if (
+    response.status === 401 &&
+    !isRetry &&
+    !path.includes("/api/auth/refresh-token") &&
+    !path.includes("/api/auth/login")
+  ) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      return apiRequest<T>(path, { ...options, accessToken: newToken }, true);
+    }
+  }
 
   return parseResponse<T>(response);
 }

@@ -4,14 +4,16 @@ import logger from './utils/logger.js';
 import errorHandler from './middlewares/errorHandler.js';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-import mongoSanitize from 'express-mongo-sanitize';
+import mongoSanitize from '@exortek/express-mongo-sanitize';
 
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 
-const corsOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',')
-  : ['http://localhost:5173'];
+// const corsOrigins = process.env.CORS_ORIGIN
+//   ? process.env.CORS_ORIGIN.split(',')
+//   : ['http://localhost:5173'];
+
+const corsOrigins = 'http://localhost:5173';
 
 app.use(
   cors({
