@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError } from "@/lib/api/client";
 import { authApi } from "@/lib/api/auth.api";
 import { currentUserQueryKey } from "@/lib/auth/query-keys";
 import type { User } from "@/types/auth";
@@ -7,19 +6,7 @@ import type { User } from "@/types/auth";
 export function useCurrentUser() {
   return useQuery({
     queryKey: currentUserQueryKey,
-    queryFn: async (): Promise<User | null> => {
-      try {
-        await authApi.refreshToken();
-        return await authApi.getCurrentUser();
-      } catch (error) {
-        // A missing or expired refresh cookie means the user is logged out.
-        if (error instanceof ApiError && error.statusCode === 401) {
-          return null;
-        }
-
-        throw error;
-      }
-    },
+    queryFn: (): Promise<User> => authApi.getCurrentUser(),
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
