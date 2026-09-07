@@ -1,24 +1,26 @@
 # URL Shortener Backend
 
-A RESTful URL shortening backend built with **Node.js, Express 5, TypeScript, and MongoDB**. The API provides user authentication, JWT-based access and refresh tokens, session persistence, and authenticated URL management with short-code redirects.
+A production-minded REST API for the URL Shortener application, built with **Node.js, Express 5, TypeScript, MongoDB, and Mongoose**. The backend handles authentication, session management, URL shortening, redirects, click tracking, validation, authorization, logging, and security middleware.
 
 ## ✨ Features
 
 - 🔐 **User authentication** — register and log in with email/password.
-- 🎟️ **JWT authentication** — short-lived access tokens and refresh tokens stored in an HTTP-only cookie.
-- 🔄 **Refresh token flow** — refresh access tokens without requiring the user to log in again.
-- 🧾 **Session management** — refresh tokens are stored as hashed session records with IP, user-agent, last-used, revocation, and expiration metadata.
-- 🔗 **URL shortening** — authenticated users can create short URLs for valid HTTP/HTTPS destinations.
-- 🚀 **Short URL redirects** — resolve a short code and redirect directly to the original URL.
-- 📊 **Click tracking** — each URL keeps a click counter.
-- ⛔ **URL disabling** — temporarily disable a short URL without deleting it.
-- 🗑️ **URL deletion** — users can delete their own shortened URLs.
-- 👤 **User endpoints** — retrieve the current user's profile and admin-only user listings.
+- 🎟️ **JWT authentication** — short-lived access tokens with refresh tokens stored in HTTP-only cookies.
+- 🔄 **Refresh-token rotation** — refresh sessions are persisted and managed server-side.
+- 🧾 **Session management** — track sessions with IP address, user-agent, last activity, revocation, and expiration metadata.
+- 🔗 **URL shortening** — create short URLs for HTTP/HTTPS destinations.
+- 🚀 **Short URL redirects** — resolve a short code and redirect to the original URL.
+- 📊 **Click tracking** — increment click counts when short URLs are used.
+- ⛔ **URL disabling** — disable a shortened URL without deleting its record.
+- 🗑️ **URL deletion** — delete URLs belonging to the authenticated user.
+- 👤 **User endpoints** — retrieve the current profile and admin-only user listings.
 - 🛡️ **Role-based authorization** — supports `user` and `admin` roles.
-- ✅ **Request validation** — Zod validates authentication and URL payloads.
-- 🍪 **Secure cookie handling** — refresh tokens use HTTP-only cookies with production-aware security settings.
-- 📝 **Structured error handling & logging** — centralized error handling with Winston request logging.
-- 🌐 **CORS support** — configurable origins with credentials enabled.
+- ✅ **Zod validation** — validate authentication and URL request payloads.
+- 🧹 **MongoDB sanitization** — protect against NoSQL injection through request data.
+- 🛡️ **Security middleware** — Helmet, rate limiting, compression, CORS, and request-size limits.
+- 📝 **Centralized error handling & logging** — structured errors and Winston logging.
+- 🗄️ **MongoDB TTL cleanup** — expired sessions are automatically removed through a TTL index.
+- 🧪 **Automated API integration testing** — Jest and Supertest coverage for backend behavior.
 
 ## 🛠️ Tech Stack
 
@@ -26,15 +28,21 @@ A RESTful URL shortening backend built with **Node.js, Express 5, TypeScript, an
 | --- | --- |
 | **Node.js** | JavaScript runtime |
 | **Express 5** | REST API framework |
-| **TypeScript** | Type-safe application development |
+| **TypeScript** | Type-safe development |
 | **MongoDB** | Database |
-| **Mongoose** | MongoDB ODM |
-| **JWT** | Access and refresh token authentication |
+| **Mongoose** | MongoDB ODM and schema management |
+| **jsonwebtoken** | Access and refresh token handling |
 | **bcryptjs** | Password hashing |
 | **Zod** | Request validation |
+| **express-rate-limit** | Authentication/API rate limiting |
+| **Helmet** | HTTP security headers |
+| **Mongo sanitize** | NoSQL injection protection |
 | **Winston** | Application logging |
-| **cookie-parser** | HTTP cookie parsing |
+| **cookie-parser** | HTTP cookie handling |
 | **CORS** | Cross-origin request handling |
+| **compression** | Response compression |
+| **Jest** | Automated testing |
+| **Supertest** | HTTP/API integration testing |
 | **tsx** | TypeScript development runner |
 | **tsup** | Production bundling |
 
@@ -44,15 +52,16 @@ A RESTful URL shortening backend built with **Node.js, Express 5, TypeScript, an
 url_shortener_backend/
 ├── src/
 │   ├── controllers/       # HTTP request/response handlers
-│   ├── db/                # MongoDB connection
-│   ├── middlewares/       # Authentication, authorization, and error handling
-│   ├── models/             # Mongoose models
-│   ├── routes/             # API route definitions
-│   ├── services/           # Business logic
-│   ├── utils/              # JWT, cookies, logging, API helpers, etc.
-│   ├── validators/         # Zod validation schemas
-│   ├── app.ts              # Express application configuration
-│   └── index.ts             # Application entry point
+│   ├── db/                # MongoDB connection and database setup
+│   ├── middlewares/       # Authentication, authorization, rate limiting, errors
+│   ├── models/            # Mongoose models
+│   ├── routes/            # Express route definitions
+│   ├── services/          # Application/business logic
+│   ├── utils/             # JWT, cookies, logging, and shared helpers
+│   ├── validators/        # Zod schemas
+│   ├── test/              # Jest/Supertest integration tests and test setup
+│   ├── app.ts             # Express application configuration
+│   └── index.ts            # Server entry point
 ├── package.json
 ├── package-lock.json
 ├── tsconfig.json
@@ -63,11 +72,9 @@ url_shortener_backend/
 
 ### Prerequisites
 
-Make sure you have the following installed:
-
-- **Node.js** 20+ recommended
+- **Node.js 20+** recommended
 - **npm**
-- **MongoDB** (local instance or MongoDB Atlas)
+- **MongoDB** local instance or MongoDB Atlas
 
 ### 1. Clone the repository
 
@@ -102,9 +109,9 @@ SALT_ROUNDS=10
 CORS_ORIGIN=http://localhost:5173
 ```
 
-> **Security:** Never commit real secrets or production credentials to Git. Use strong, randomly generated values for the JWT secrets.
+For tests, configure the corresponding values in `.env.test`, including a test MongoDB connection and JWT secrets.
 
-The application connects to MongoDB using `MONGO_URI/DB_NAME` and defaults to port `8000` when `PORT` is not provided.
+> **Security:** Never commit real secrets or production credentials. Use strong, randomly generated JWT secrets.
 
 ### 4. Start the development server
 
@@ -112,44 +119,35 @@ The application connects to MongoDB using `MONGO_URI/DB_NAME` and defaults to po
 npm run dev
 ```
 
-The API will be available at:
-
-```text
-http://localhost:8000
-```
+The API runs on `http://localhost:8000` by default.
 
 ### 5. Build for production
 
 ```bash
 npm run build
-```
-
-The compiled application is generated in `dist/`.
-
-Start the production build with:
-
-```bash
 npm start
 ```
 
-## 🔐 Authentication Flow
+The production bundle is generated in `dist/`.
 
-The backend uses a two-token authentication model:
+## 🔐 Authentication & Sessions
 
-1. **Register** with username, email, password, and password confirmation.
-2. **Login** with email and password.
-3. The API returns an **access token** in the JSON response.
-4. The **refresh token** is stored in an HTTP-only cookie named `refreshToken`.
-5. Authenticated API requests send the access token as:
+The backend uses an access-token + refresh-token architecture:
+
+1. Register or log in with email/password.
+2. The API returns a short-lived access token.
+3. The refresh token is stored in an HTTP-only `refreshToken` cookie.
+4. Protected requests send the access token using:
 
 ```http
 Authorization: Bearer <access-token>
 ```
 
-6. When the access token expires, call `/api/auth/refresh-token` to obtain a new access token.
-7. Logout invalidates the refresh-token session and clears the refresh-token cookie.
+5. When the access token expires, the client calls `/api/auth/refresh-token`.
+6. The backend validates the refresh-token session and issues a new access token.
+7. Logout revokes the session and clears the refresh-token cookie.
 
-Access tokens are configured to expire after **15 minutes**, while refresh-token cookies are configured for **7 days**.
+Refresh sessions are stored as hashes rather than raw refresh tokens and include activity/revocation metadata.
 
 ## 📡 API Reference
 
@@ -166,68 +164,28 @@ http://localhost:8000
 | `POST` | `/api/auth/register` | No | Register a new user |
 | `POST` | `/api/auth/login` | No | Log in and receive an access token |
 | `POST` | `/api/auth/refresh-token` | Refresh cookie | Refresh the access token |
-| `POST` | `/api/auth/logout` | Refresh cookie | Log out and revoke the refresh-token session |
-
-#### Register
-
-```http
-POST /api/auth/register
-Content-Type: application/json
-```
-
-```json
-{
-  "username": "bilal",
-  "email": "bilal@example.com",
-  "password": "password123",
-  "confirmPassword": "password123"
-}
-```
-
-#### Login
-
-```http
-POST /api/auth/login
-Content-Type: application/json
-```
-
-```json
-{
-  "email": "bilal@example.com",
-  "password": "password123"
-}
-```
-
-The response contains the authenticated user and access token. The refresh token is set as an HTTP-only cookie.
+| `POST` | `/api/auth/logout` | Refresh cookie | Revoke the current session and log out |
 
 ### User
-
-All user routes below require a valid access token.
 
 | Method | Endpoint | Auth | Description |
 | --- | --- | --- | --- |
 | `GET` | `/api/user/me` | User | Get the authenticated user's profile |
 | `GET` | `/api/user/all-user` | Admin | Get all users |
 
-Example authorization header:
-
-```http
-Authorization: Bearer <access-token>
-```
-
 ### URLs
-
-All URL-management routes except the redirect require a valid access token.
 
 | Method | Endpoint | Auth | Description |
 | --- | --- | --- | --- |
 | `POST` | `/api/url/create-url` | User | Create a short URL |
-| `GET` | `/api/url/me` | User | Get URLs belonging to the authenticated user |
-| `PATCH` | `/api/url/:id/disable` | User | Disable a user's URL |
-| `DELETE` | `/api/url/:id` | User | Delete a user's URL |
-| `GET` | `/api/url/:shortCode` | No | Redirect to the original URL |
+| `GET` | `/api/url/me` | User | Get the authenticated user's URLs |
+| `PATCH` | `/api/url/:id/disable` | User | Disable a URL |
+| `DELETE` | `/api/url/:id` | User | Delete a URL |
+| `GET` | `/:shortCode` | No | Redirect to the original URL |
 
-#### Create a short URL
+> **Important:** Public short URLs are served from the backend root. A generated URL looks like `http://localhost:8000/abc123`, not `/api/url/abc123`.
+
+### Create a short URL
 
 ```http
 POST /api/url/create-url
@@ -241,21 +199,17 @@ Content-Type: application/json
 }
 ```
 
-The URL must be a valid HTTP or HTTPS URL.
-
-#### Redirect
+### Redirect
 
 ```http
-GET /api/url/:shortCode
+GET /:shortCode
 ```
 
-A valid short code redirects the requester to its original URL and increments the URL's click count.
+A valid short code redirects to its original destination and increments the click counter. Disabled URLs return an appropriate error instead of redirecting.
 
 ## 🗃️ Data Models
 
 ### User
-
-Users contain:
 
 - `username`
 - `email`
@@ -264,11 +218,9 @@ Users contain:
 - `createdAt`
 - `updatedAt`
 
-Passwords are stored as hashes rather than plain text.
+Passwords are stored as bcrypt hashes.
 
 ### URL
-
-Each shortened URL contains:
 
 - `originalUrl`
 - `shortCode`
@@ -278,11 +230,7 @@ Each shortened URL contains:
 - `createdAt`
 - `updatedAt`
 
-Short codes and user references are indexed for efficient lookups.
-
 ### Session
-
-Sessions contain:
 
 - `user`
 - `sessionId`
@@ -295,33 +243,49 @@ Sessions contain:
 - `createdAt`
 - `updatedAt`
 
-Expired sessions are automatically removed by MongoDB's TTL index on `expiresAt`.
+MongoDB's TTL index automatically removes expired sessions.
 
 ## 🛡️ Security
 
-The backend includes several security-oriented practices:
+The backend applies multiple layers of protection:
 
 - Password hashing with `bcryptjs`.
-- Short-lived access tokens to limit the impact of token exposure.
-- Refresh tokens stored in HTTP-only cookies.
-- Refresh-token hashes stored in the database rather than raw refresh tokens.
-- Authentication middleware for protected routes.
-- Role-based authorization for admin-only operations.
-- Zod validation for incoming authentication and URL payloads.
-- HTTP/HTTPS validation for destination URLs.
-- Configurable CORS origins.
-- Request-body size limits of 16 KB.
+- Short-lived access tokens.
+- HTTP-only refresh-token cookies.
+- Hashed refresh tokens in persistent sessions.
+- Authentication and role-based authorization middleware.
+- Zod request validation.
+- Authentication and refresh rate limiting.
+- Helmet security headers.
+- MongoDB request sanitization.
+- Configurable CORS with credentials.
+- 16 KB request-body limits.
 - Centralized error handling.
+- Structured application logging.
 
 ## 🧪 Testing
 
-A test script has not been configured yet. The current `package.json` contains a placeholder test command:
+The backend uses **Jest** with **Supertest** for API integration testing.
+
+Run the complete test suite:
 
 ```bash
 npm test
 ```
 
-Testing can be added with a framework such as Jest or Vitest and an API testing library such as Supertest.
+Run tests in watch mode:
+
+```bash
+npm run test:watch
+```
+
+Generate a coverage report:
+
+```bash
+npm run test:coverage
+```
+
+Tests use a dedicated test environment and should not point at a production database.
 
 ## 📜 Available Scripts
 
@@ -329,24 +293,46 @@ Testing can be added with a framework such as Jest or Vitest and an API testing 
 | --- | --- |
 | `npm run dev` | Start the development server with `tsx watch` |
 | `npm run build` | Build the TypeScript application with `tsup` |
-| `npm start` | Start the compiled application from `dist/` |
-| `npm test` | Placeholder test command |
+| `npm start` | Start the compiled production application |
+| `npm test` | Run the Jest test suite |
+| `npm run test:watch` | Run Jest in watch mode |
+| `npm run test:coverage` | Run Jest with coverage reporting |
 
 ## 🌍 CORS Configuration
 
-By default, the API allows requests from:
-
-```text
-http://localhost:5173
-```
-
-To configure one or more origins, set `CORS_ORIGIN` as a comma-separated list:
+Configure frontend origins with a comma-separated `CORS_ORIGIN` value:
 
 ```env
 CORS_ORIGIN=http://localhost:5173,http://localhost:3000
 ```
 
-Credentials are enabled so the refresh-token cookie can be sent by the frontend.
+Credentials are enabled so the browser can send the HTTP-only refresh-token cookie.
+
+## 🔄 Request Flow
+
+```text
+React Frontend
+      │
+      │ HTTP + Bearer access token
+      ▼
+Express API
+      │
+      ├── Middleware
+      │   ├── CORS
+      │   ├── Helmet
+      │   ├── Rate limiting
+      │   ├── Authentication
+      │   └── Validation
+      │
+      ├── Controllers
+      │
+      ├── Services
+      │
+      ▼
+   MongoDB
+      │
+      └── Users / URLs / Sessions
+```
 
 ## 🤝 Contributing
 
@@ -358,10 +344,11 @@ git checkout -b feature/your-feature
 ```
 
 3. Make your changes.
-4. Run the build to verify TypeScript compilation:
+4. Run the build and test suite:
 
 ```bash
 npm run build
+npm test
 ```
 
 5. Commit your changes:
@@ -374,7 +361,7 @@ git commit -m "feat: your change"
 
 ## 📄 License
 
-No license file is currently defined for this backend repository. Add a `LICENSE` file if you intend to distribute the project under an open-source license.
+No license file is currently defined for this project. Add a `LICENSE` file if you intend to distribute it under an open-source license.
 
 ---
 
