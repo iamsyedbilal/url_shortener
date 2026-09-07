@@ -82,8 +82,6 @@ url_shortener_frontend/
 └── README.md
 ```
 
-> The exact contents of `src/` may grow as new product features are added. The structure above describes the current architectural responsibilities rather than requiring every directory to exist permanently.
-
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -106,9 +104,9 @@ cd url_shortener/url_shortener_frontend
 npm install
 ```
 
-### 3. Configure the backend
+### 3. Start the backend
 
-Start the backend from the sibling directory:
+From the sibling backend directory:
 
 ```bash
 cd ../url_shortener_backend
@@ -121,8 +119,6 @@ Then return to the frontend directory:
 ```bash
 cd ../url_shortener_frontend
 ```
-
-The frontend expects the backend API to be available according to the API/client configuration in the source code.
 
 ### 4. Start the frontend
 
@@ -188,9 +184,7 @@ Main API areas include:
 - **URLs** — create and manage shortened URLs
 - **Public redirects** — short URLs resolve through the backend root route
 
-For complete endpoint documentation, see the backend README:
-
-[`url_shortener_backend/README.md`](../url_shortener_backend/README.md)
+For complete endpoint documentation, see the [backend README](../url_shortener_backend/README.md).
 
 ## 📦 Scripts
 
@@ -262,7 +256,7 @@ Potential frontend improvements include:
 
 ## 📄 License
 
-See the repository root for project-level licensing information.
+This project is licensed under the **MIT License**. See the repository root [`LICENSE`](../LICENSE) file for the complete license text.
 
 ---
 
