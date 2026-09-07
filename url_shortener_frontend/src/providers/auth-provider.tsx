@@ -8,7 +8,6 @@ interface AuthProviderProps {
 }
 
 export default function AuthProvider({ children }: AuthProviderProps) {
-  // This query runs once when the app starts and restores the session.
   const currentUserQuery = useCurrentUser();
   const logoutMutation = useLogout();
   const user = currentUserQuery.data ?? null;
@@ -24,7 +23,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
         user,
         accessToken,
         isLoading: currentUserQuery.isLoading,
-        isAuthenticated: Boolean(user && accessToken),
+        isAuthenticated: Boolean(user),
         logout,
       }}
     >
