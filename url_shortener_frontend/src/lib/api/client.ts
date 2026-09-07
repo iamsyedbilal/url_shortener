@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 export interface ApiResponse<T> {
   statusCode: number;
@@ -13,13 +13,13 @@ export class ApiError extends Error {
 
   constructor(message: string, statusCode: number, data?: unknown) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
     this.statusCode = statusCode;
     this.data = data;
   }
 }
 
-interface RequestOptions extends Omit<RequestInit, 'body'> {
+interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   accessToken?: string | null;
 }
@@ -29,12 +29,12 @@ async function parseResponse<T>(response: Response): Promise<T> {
     return undefined as T;
   }
 
-  const contentType = response.headers.get('content-type');
+  const contentType = response.headers.get("content-type");
 
-  if (!contentType?.includes('application/json')) {
+  if (!contentType?.includes("application/json")) {
     if (!response.ok) {
       throw new ApiError(
-        response.statusText || 'Request failed',
+        response.statusText || "Request failed",
         response.status,
       );
     }
@@ -48,7 +48,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
 
   if (!response.ok) {
     throw new ApiError(
-      payload.message || 'Request failed',
+      payload.message || "Request failed",
       response.status,
       payload.data,
     );
@@ -66,17 +66,17 @@ export async function apiRequest<T>(
   const requestHeaders = new Headers(headers);
 
   if (body !== undefined && !(body instanceof FormData)) {
-    requestHeaders.set('Content-Type', 'application/json');
+    requestHeaders.set("Content-Type", "application/json");
   }
 
   if (accessToken) {
-    requestHeaders.set('Authorization', `Bearer ${accessToken}`);
+    requestHeaders.set("Authorization", `Bearer ${accessToken}`);
   }
 
   const response = await fetch(`${API_URL}${path}`, {
     ...requestOptions,
     headers: requestHeaders,
-    credentials: 'include',
+    credentials: "include",
     body:
       body === undefined
         ? undefined
@@ -89,15 +89,23 @@ export async function apiRequest<T>(
 }
 
 export const api = {
-  get: <T>(path: string, options?: Omit<RequestOptions, 'method' | 'body'>) =>
-    apiRequest<T>(path, { ...options, method: 'GET' }),
+  get: <T>(path: string, options?: Omit<RequestOptions, "method" | "body">) =>
+    apiRequest<T>(path, { ...options, method: "GET" }),
 
-  post: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>) =>
-    apiRequest<T>(path, { ...options, method: 'POST', body }),
+  post: <T>(
+    path: string,
+    body?: unknown,
+    options?: Omit<RequestOptions, "method" | "body">,
+  ) => apiRequest<T>(path, { ...options, method: "POST", body }),
 
-  patch: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>) =>
-    apiRequest<T>(path, { ...options, method: 'PATCH', body }),
+  patch: <T>(
+    path: string,
+    body?: unknown,
+    options?: Omit<RequestOptions, "method" | "body">,
+  ) => apiRequest<T>(path, { ...options, method: "PATCH", body }),
 
-  delete: <T>(path: string, options?: Omit<RequestOptions, 'method' | 'body'>) =>
-    apiRequest<T>(path, { ...options, method: 'DELETE' }),
+  delete: <T>(
+    path: string,
+    options?: Omit<RequestOptions, "method" | "body">,
+  ) => apiRequest<T>(path, { ...options, method: "DELETE" }),
 };
