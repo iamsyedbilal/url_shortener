@@ -361,7 +361,7 @@ git commit -m "feat: your change"
 
 ## 📄 License
 
-No license file is currently defined for this project. Add a `LICENSE` file if you intend to distribute it under an open-source license.
+This project is licensed under the **MIT License**. See the repository root [`LICENSE`](../LICENSE) file for the complete license text.
 
 ---
 
