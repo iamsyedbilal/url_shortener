@@ -1,7 +1,9 @@
 import { tokenStore } from "./token-store";
 
+// Every API request starts with this URL.
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
+// This is the response shape returned by the backend.
 export interface ApiResponse<T> {
   statusCode: number;
   message: string;
@@ -9,6 +11,7 @@ export interface ApiResponse<T> {
   success: boolean;
 }
 
+// Failed API requests are converted into this error type for the UI to display.
 export class ApiError extends Error {
   statusCode: number;
   data?: unknown;
@@ -21,11 +24,13 @@ export class ApiError extends Error {
   }
 }
 
+// These options are shared by all GET, POST, PATCH, and DELETE helpers.
 interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   accessToken?: string | null;
 }
 
+// Read the backend response and return only its data property.
 async function parseResponse<T>(response: Response): Promise<T> {
   if (response.status === 204) {
     return undefined as T;
@@ -59,21 +64,23 @@ async function parseResponse<T>(response: Response): Promise<T> {
   return payload.data;
 }
 
+// Only one refresh request is allowed when several requests expire together.
 let refreshPromise: Promise<string | null> | null = null;
 
+// Ask the backend for a new access token using the HTTP-only refresh cookie.
 async function refreshAccessToken(): Promise<string | null> {
   if (!refreshPromise) {
     refreshPromise = (async () => {
       try {
-        const res = await fetch(`${API_URL}/api/auth/refresh-token`, {
+        const response = await fetch(`${API_URL}/api/auth/refresh-token`, {
           method: "POST",
           credentials: "include",
         });
-        if (!res.ok) {
+        if (!response.ok) {
           tokenStore.set(null);
           return null;
         }
-        const payload = (await res.json()) as ApiResponse<{
+        const payload = (await response.json()) as ApiResponse<{
           accessToken: string;
         }>;
         tokenStore.set(payload.data.accessToken);
@@ -89,6 +96,7 @@ async function refreshAccessToken(): Promise<string | null> {
   return refreshPromise;
 }
 
+// Send one request, retrying it once after a successful token refresh.
 export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
@@ -134,6 +142,7 @@ export async function apiRequest<T>(
   return parseResponse<T>(response);
 }
 
+// Short methods used by feature-specific API modules.
 export const api = {
   get: <T>(path: string, options?: Omit<RequestOptions, "method" | "body">) =>
     apiRequest<T>(path, { ...options, method: "GET" }),

@@ -1,10 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router";
 import { z } from "zod";
 import { ApiError } from "@/lib/api/client";
-import { authApi } from "@/lib/api/auth.api";
+import { useRegister } from "@/hooks/use-auth";
 import type { RegisterPayload } from "@/types/auth";
 
 const registerSchema = z
@@ -28,11 +27,11 @@ const registerSchema = z
 
 export default function Register() {
   const navigate = useNavigate();
-  const [serverError, setServerError] = useState<string | null>(null);
+  const registerMutation = useRegister();
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<RegisterPayload>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -43,20 +42,13 @@ export default function Register() {
     },
   });
 
-  const onSubmit = async (payload: RegisterPayload) => {
-    setServerError(null);
-
-    try {
-      await authApi.register(payload);
-      navigate("/login?registered=true", { replace: true });
-    } catch (error) {
-      setServerError(
-        error instanceof ApiError
-          ? error.message
-          : "Unable to create your account. Please try again.",
-      );
-    }
+  const onSubmit = (payload: RegisterPayload) => {
+    registerMutation.mutate(payload, {
+      onSuccess: () => navigate("/login?registered=true", { replace: true }),
+    });
   };
+
+  const serverError = registerMutation.error;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-12">
@@ -81,7 +73,9 @@ export default function Register() {
               className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
               role="alert"
             >
-              {serverError}
+              {serverError instanceof ApiError
+                ? serverError.message
+                : "Unable to create your account. Please try again."}
             </p>
           )}
 
@@ -161,10 +155,12 @@ export default function Register() {
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={registerMutation.isPending}
             className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
           >
-            {isSubmitting ? "Creating account..." : "Create account"}
+            {registerMutation.isPending
+              ? "Creating account..."
+              : "Create account"}
           </button>
         </form>
 

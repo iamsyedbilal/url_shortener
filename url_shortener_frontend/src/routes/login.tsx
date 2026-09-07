@@ -1,10 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router";
 import { z } from "zod";
 import { ApiError } from "@/lib/api/client";
-import { authApi } from "@/lib/api/auth.api";
+import { useLogin } from "@/hooks/use-auth";
 import type { LoginPayload } from "@/types/auth";
 
 const loginSchema = z.object({
@@ -14,11 +13,11 @@ const loginSchema = z.object({
 
 export default function Login() {
   const navigate = useNavigate();
-  const [serverError, setServerError] = useState<string | null>(null);
+  const loginMutation = useLogin();
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<LoginPayload>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -27,20 +26,13 @@ export default function Login() {
     },
   });
 
-  const onSubmit = async (payload: LoginPayload) => {
-    setServerError(null);
-
-    try {
-      await authApi.login(payload);
-      navigate("/", { replace: true });
-    } catch (error) {
-      setServerError(
-        error instanceof ApiError
-          ? error.message
-          : "Unable to sign in. Please try again.",
-      );
-    }
+  const onSubmit = (payload: LoginPayload) => {
+    loginMutation.mutate(payload, {
+      onSuccess: () => navigate("/", { replace: true }),
+    });
   };
+
+  const serverError = loginMutation.error;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-12">
@@ -65,7 +57,9 @@ export default function Login() {
               className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
               role="alert"
             >
-              {serverError}
+              {serverError instanceof ApiError
+                ? serverError.message
+                : "Unable to sign in. Please try again."}
             </p>
           )}
 
@@ -107,10 +101,10 @@ export default function Login() {
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={loginMutation.isPending}
             className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
           >
-            {isSubmitting ? "Signing in..." : "Sign in"}
+            {loginMutation.isPending ? "Signing in..." : "Sign in"}
           </button>
         </form>
 
