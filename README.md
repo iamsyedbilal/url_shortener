@@ -88,41 +88,13 @@ This monorepo contains a React frontend and a Node.js/Express backend designed t
 
 ```text
 url_shortener/
+├── LICENSE
+├── README.md
 ├── url_shortener_frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── features/
-│   │   ├── hooks/
-│   │   ├── routes/
-│   │   ├── services/
-│   │   ├── lib/
-│   │   └── main.tsx
-│   ├── public/
-│   ├── package.json
-│   ├── vite.config.ts
-│   ├── tsconfig.json
-│   └── README.md
-│
-├── url_shortener_backend/
-│   ├── src/
-│   │   ├── controllers/
-│   │   ├── db/
-│   │   ├── middlewares/
-│   │   ├── models/
-│   │   ├── routes/
-│   │   ├── services/
-│   │   ├── utils/
-│   │   ├── validators/
-│   │   ├── app.ts
-│   │   └── index.ts
-│   ├── tests/
-│   │   └── integration/
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── README.md
-│
-└── README.md
+└── url_shortener_backend/
 ```
+
+See the frontend and backend READMEs for their detailed structures and workflows.
 
 ## 🛠️ Tech Stack
 
@@ -164,8 +136,6 @@ url_shortener/
 
 ### Prerequisites
 
-Install the following before running the project:
-
 - **Node.js 20+** recommended
 - **npm**
 - **MongoDB** locally or through MongoDB Atlas
@@ -203,12 +173,6 @@ Then start the backend:
 npm run dev
 ```
 
-The API runs at:
-
-```text
-http://localhost:8000
-```
-
 ### 3. Start the frontend
 
 Open another terminal from the repository root:
@@ -219,70 +183,23 @@ npm install
 npm run dev
 ```
 
-The frontend runs at the Vite development URL, typically:
-
-```text
-http://localhost:5173
-```
-
-> The frontend expects the backend API to be running and configured for the frontend origin.
-
-### 4. Production builds
-
-Backend:
-
-```bash
-cd url_shortener_backend
-npm run build
-npm start
-```
-
-Frontend:
-
-```bash
-cd url_shortener_frontend
-npm run build
-npm run preview
-```
+The frontend runs at the Vite development URL, typically `http://localhost:5173`.
 
 ## 📡 API Overview
 
-The backend API is available under `/api`.
+The backend API is available under `/api`, while public short URLs are served from the backend root.
 
-### Authentication
+| Area | Example |
+| --- | --- |
+| Authentication | `POST /api/auth/login` |
+| Current user | `GET /api/user/me` |
+| Create short URL | `POST /api/url/create-url` |
+| User URLs | `GET /api/url/me` |
+| Public redirect | `GET /:shortCode` |
+| Admin users | `GET /api/admin/users` |
+| Admin URLs | `GET /api/admin/urls` |
 
-| Method | Endpoint | Auth | Description |
-| --- | --- | --- | --- |
-| `POST` | `/api/auth/register` | Public | Register a user |
-| `POST` | `/api/auth/login` | Public | Login and receive an access token |
-| `POST` | `/api/auth/refresh-token` | Refresh cookie | Refresh the access token |
-| `POST` | `/api/auth/logout` | Refresh cookie | Logout and revoke the refresh-token session |
-
-### Users
-
-| Method | Endpoint | Auth | Description |
-| --- | --- | --- | --- |
-| `GET` | `/api/user/me` | User | Get the current user's profile |
-| `GET` | `/api/user/all-user` | Admin | Get all users |
-
-### URLs
-
-| Method | Endpoint | Auth | Description |
-| --- | --- | --- | --- |
-| `POST` | `/api/url/create-url` | User | Create a short URL |
-| `GET` | `/api/url/me` | User | Get the current user's URLs |
-| `PATCH` | `/api/url/:id/disable` | User | Disable a URL |
-| `DELETE` | `/api/url/:id` | User | Delete a URL |
-| `GET` | `/:shortCode` | Public | Redirect to the original URL |
-
-### Admin
-
-| Method | Endpoint | Auth | Description |
-| --- | --- | --- | --- |
-| `GET` | `/api/admin/users` | Admin | List users |
-| `GET` | `/api/admin/urls` | Admin | List URLs |
-| `PATCH` | `/api/admin/urls/:id/disable` | Admin | Disable a URL |
-| `DELETE` | `/api/admin/urls/:id` | Admin | Delete a URL |
+For complete endpoint documentation, see the backend README.
 
 ## 🔐 Authentication Flow
 
@@ -296,8 +213,6 @@ The application uses short-lived access tokens together with refresh-token sessi
 6. When the access token expires, the frontend can refresh the session using the refresh-token endpoint.
 7. Refresh tokens are stored as hashes in persistent session records.
 8. Logout revokes the session and clears the refresh-token cookie.
-
-Access tokens currently expire after **15 minutes**, while refresh-token cookies are configured for **7 days**.
 
 ## 🔗 URL Shortening Flow
 
@@ -330,45 +245,26 @@ Backend resolves short code
         └── Disabled → 410 response
 ```
 
-## 🗃️ Data Models
+## 🧪 Testing
 
-### User
+The backend includes automated API integration tests using **Jest + Supertest**.
 
-- `username`
-- `email`
-- `passwordHash`
-- `role`
-- `createdAt`
-- `updatedAt`
+```bash
+cd url_shortener_backend
+npm test
+npm run test:watch
+npm run test:coverage
+```
 
-### URL
+The frontend can be checked with:
 
-- `originalUrl`
-- `shortCode`
-- `userId`
-- `clickCount`
-- `isActive`
-- `createdAt`
-- `updatedAt`
-
-### Session
-
-- `user`
-- `sessionId`
-- `refreshTokenHash`
-- `ip`
-- `userAgent`
-- `lastUsedAt`
-- `revokedAt`
-- `expiresAt`
-- `createdAt`
-- `updatedAt`
-
-Expired sessions are automatically cleaned up through MongoDB's TTL index on `expiresAt`.
+```bash
+cd url_shortener_frontend
+npm run lint
+npm run build
+```
 
 ## 🛡️ Security
-
-Security is an important part of the project architecture:
 
 - Passwords are hashed with `bcryptjs`.
 - Access tokens are short-lived.
@@ -383,67 +279,6 @@ Security is an important part of the project architecture:
 - Authentication/API rate limiting is enabled.
 - Errors are handled centrally.
 - Requests are logged with Winston.
-
-## 🧪 Testing
-
-The backend includes automated API integration tests using **Jest + Supertest**.
-
-Run the backend test suite:
-
-```bash
-cd url_shortener_backend
-npm test
-```
-
-Watch tests during development:
-
-```bash
-npm run test:watch
-```
-
-Generate coverage:
-
-```bash
-npm run test:coverage
-```
-
-The test suite covers areas including authentication, users, URL management, redirects, validation, authorization, refresh-token flows, and security behavior.
-
-## 📜 Scripts
-
-### Frontend
-
-Run from `url_shortener_frontend`:
-
-| Command | Description |
-| --- | --- |
-| `npm run dev` | Start the Vite development server |
-| `npm run build` | Type-check and build the frontend |
-| `npm run lint` | Run ESLint |
-| `npm run preview` | Preview the production build |
-
-### Backend
-
-Run from `url_shortener_backend`:
-
-| Command | Description |
-| --- | --- |
-| `npm run dev` | Start the development server with file watching |
-| `npm run build` | Build the TypeScript backend with tsup |
-| `npm start` | Start the compiled backend |
-| `npm test` | Run the Jest test suite |
-| `npm run test:watch` | Run Jest in watch mode |
-| `npm run test:coverage` | Run Jest with coverage |
-
-## 🌐 CORS
-
-Configure one or more frontend origins in the backend `.env` file:
-
-```env
-CORS_ORIGIN=http://localhost:5173,http://localhost:3000
-```
-
-Credentials are enabled so the refresh-token cookie can be used by the frontend.
 
 ## 🗺️ Roadmap
 
@@ -462,36 +297,15 @@ Potential future improvements include:
 ## 🤝 Contributing
 
 1. Fork the repository.
-2. Create a feature branch:
-
-```bash
-git checkout -b feature/your-feature
-```
-
+2. Create a feature branch.
 3. Make your changes.
-4. Run the relevant checks:
-
-```bash
-cd url_shortener_backend
-npm test
-npm run build
-
-cd ../url_shortener_frontend
-npm run lint
-npm run build
-```
-
-5. Commit your changes:
-
-```bash
-git commit -m "feat: your change"
-```
-
+4. Run the relevant tests, linting, and builds.
+5. Commit your changes with a descriptive message.
 6. Push your branch and open a pull request.
 
 ## 📄 License
 
-No license file is currently defined. Add a `LICENSE` file if you intend to distribute this project under an open-source license.
+This project is licensed under the **MIT License**. See the [`LICENSE`](LICENSE) file for the complete license text.
 
 ---
 
