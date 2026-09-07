@@ -10,11 +10,13 @@ import { redirectUrl } from './controllers/url.controller.js';
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 
-// const corsOrigins = process.env.CORS_ORIGIN
-//   ? process.env.CORS_ORIGIN.split(',')
-//   : ['http://localhost:5173'];
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean)
+  : ['http://localhost:5173'];
 
-const corsOrigins = 'http://localhost:5173';
+// const corsOrigins = 'http://localhost:5173';
 
 app.use(
   cors({
